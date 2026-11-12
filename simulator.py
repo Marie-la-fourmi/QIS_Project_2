@@ -95,6 +95,25 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
 
 
 def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
+    ph=params["physics"]
+    sim = Simulator(make_links(params, which="variant"),
+                    t2 = ph["t2"],
+                    q_swap = ph["q_swap"],
+                    f_swap = ph["f_swap"],
+                    purification_allowed = ph["purification_allowed"],
+                    seed = seed)
+    delivered= sim.run(sim_time_ms, policy=policy)
+    out = summarise(sim.delivered, sim_time_ms)
+
+    lats=sorted(max(0, d.delivery_time - d.request_time) for d in zip(request_times(params,sim_time_ms,seed), delivered))
+    p95 = lats[min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)]
+    return {
+        "rate": out["rate"],
+        "mean_fidelity": out["mean_fidelity"],
+        "p95_latency_ms": p95,
+        "pairs_consumed_per_delivery": out["generated"] / max(1, len(delivered)),
+    }
+
     """Full variant scenario with YOUR policy.
     Return {"rate": ..., "mean_fidelity": ..., "p95_latency_ms": ...,
             "pairs_consumed_per_delivery": ...}.
