@@ -91,7 +91,31 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
     q_swap=1.0, f_swap=params['physics']['f_swap']; use a policy that swaps
     as soon as both links hold a pair; summarise with qnetsim.summarise.
     """
-    raise NotImplementedError("TODO: implement run_two_hop")
+    # Step 1: build two links — Link 0 (Alice<->Repeater), Link 1 (Repeater<->Bob)
+    links=make_links(params,which="two_hop")
+
+    # Step 2: simulator with ideal reference settings
+    sim=Simulator(
+        links=links,
+        t2=math.inf,
+        q_swap=1.0,
+        f_swap=params["physics"]["f_swap"],
+        purification_allowed=False,
+        seed=seed,
+    )
+
+    # Step 3: policy — swap immediately when both links have a pair
+    class _ImmediateSwapPolicy:
+        def on_pair_ready(self, link, pair, state, sim):
+            while state.pairs.get(0) and state.pairs.get(1):
+                sim.swap(left_link_id=0, right_link_id=1)
+
+    # Step 4: run and collect delivered pairs
+    delivered = sim.run(sim_time_ms, policy=_ImmediateSwapPolicy())
+
+    # Step 5: compute metrics and return
+    result = summarise(delivered, sim_time_ms)
+    return {"rate": result["rate"], "mean_fidelity": result["mean_fidelity"]}
 
 
 def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
