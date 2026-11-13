@@ -96,21 +96,21 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
 
 def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
 
-    "get paramters from .JSON"
+    #get paramters from .JSON
     ph=params["physics"]
-    "get the simulator object"
+    #get the simulator object
     sim = Simulator(make_links(params, which="variant"),
                     t2 = ph["t2"],
                     q_swap = ph["q_swap"],
                     f_swap = ph["f_swap"],
                     purification_allowed = ph["purification_allowed"],
                     seed = seed)
-    "run the simulator for sim_time_ms with the provided policy"
+    #run the simulator for sim_time_ms with the provided policy
     delivered= sim.run(sim_time_ms, policy=policy)
-    "summarise the delivered pairs and compute p95 latency"
+    #summarise the delivered pairs and compute p95 latency
     out = summarise(sim.delivered, sim_time_ms)
 
-    "compute p95 latency"
+    #compute p95 latency
     lats=sorted(max(0, d.delivery_time - d.request_time) for d in zip(request_times(params,sim_time_ms,seed), delivered))
     p95 = lats[min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)]
     return {
