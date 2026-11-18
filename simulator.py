@@ -8,10 +8,7 @@ Only numpy + standard library + qnetsim may be used.
 """
 
 import math
-
-from fastapi import params
 import numpy as np
-
 from qnetsim import Link, Simulator, summarise
 
 
