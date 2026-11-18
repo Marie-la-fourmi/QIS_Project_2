@@ -38,21 +38,25 @@ class FreshestCapPolicy:
     """Candidate C: freshest-first swapping with a buffer cap.
 
     Swap as soon as both sides of a chain hold a pair, always using the
-    newest pair on each side (older pairs have decayed further). The right
-    (faster) link keeps at most `cap` pairs; the oldest are discarded once
-    the cap is exceeded, so no stale backlog builds up. A larger cap keeps
-    backup pairs for dry spells on the fast link, at the cost of older ones.
+    newest pair on each side (older pairs have decayed further). In each
+    chain the faster link (higher attempt_rate * p_success) keeps at most
+    `cap` pairs (1, 2 or 4); the oldest are discarded once the cap is
+    exceeded, so no stale backlog builds up. A larger cap keeps backup pairs
+    for dry spells on the fast link, at the cost of older ones.
     """
 
     def __init__(self, params, cap=1):
         self.params = params
         self.chains = params["policy"]["swap_chains"]  # list of [left, right]
         self.cap = cap
+        rate = [l["attempt_rate"] * l["p_success"] for l in params["topology"]["links"]]
+        # per chain: the faster link, whose inventory is capped
+        self.fast = [r if rate[r] >= rate[l] else l for l, r in self.chains]
 
     def on_pair_ready(self, link, pair, state, sim):
-        for left, right in self.chains:
-            while len(state.pairs.get(right, [])) > self.cap:
-                sim.discard(right, 0)                      # index 0 = oldest
+        for (left, right), fast in zip(self.chains, self.fast):
+            while len(state.pairs.get(fast, [])) > self.cap:
+                sim.discard(fast, 0)                       # index 0 = oldest
             if state.pairs.get(left) and state.pairs.get(right):
                 sim.swap(left, right,
                          left_index=len(state.pairs[left]) - 1,
