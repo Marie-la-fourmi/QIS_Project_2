@@ -149,8 +149,12 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
     delivered = sim.run(sim_time_ms, policy=policy)
     out = summarise(delivered, sim_time_ms)
 
+    # extract the request time for each delivered pair, and compute latency by using the difference between delivered_at and request time, 0 if a pair was already waiting
+    # line up the waits from shortest to longest
     lats = sorted(max(0.0, d.delivered_at - r)
               for r, d in zip(request_times(params, sim_time_ms, seed), delivered))
+
+    # pick the wait at the 95% position
     p95 = (lats[min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)]
        if lats else float("inf"))
     return {
