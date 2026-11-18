@@ -8,9 +8,7 @@ Only numpy + standard library + qnetsim may be used.
 """
 
 import math
-
 import numpy as np
-
 from qnetsim import Link, Simulator, summarise
 
 
@@ -95,6 +93,32 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
 
 
 def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
+
+    #get paramters from .JSON
+    ph=params["physics"]
+    #get the simulator object
+    sim = Simulator(make_links(params, which="variant"),
+                    t2 = ph["t2_ms"],
+                    q_swap = ph["q_swap"],
+                    f_swap = ph["f_swap"],
+                    purification_allowed = ph["purification_allowed"],
+                    seed = seed)
+    #run the simulator for sim_time_ms with the provided policy
+    delivered = sim.run(sim_time_ms, policy=policy)
+    out = summarise(delivered, sim_time_ms)
+
+    lats = sorted(max(0.0, d.delivered_at - r)
+              for r, d in zip(request_times(params, sim_time_ms, seed), delivered))
+    p95 = (lats[min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)]
+       if lats else float("inf"))
+    return {
+        "rate": out["rate"],
+        "mean_fidelity": out["mean_fidelity"],
+        "p95_latency_ms": p95,
+        "pairs_consumed_per_delivery": sim.state.stats["generated"] / max(1, len(delivered)),
+    }
+
+
     """Full variant scenario with YOUR policy.
     Return {"rate": ..., "mean_fidelity": ..., "p95_latency_ms": ...,
             "pairs_consumed_per_delivery": ...}.
@@ -110,4 +134,4 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
       * return the four metrics. pairs_consumed_per_delivery =
         stats['generated'] / max(1, delivered).
     """
-    raise NotImplementedError("TODO: implement run_variant_scenario")
+    
