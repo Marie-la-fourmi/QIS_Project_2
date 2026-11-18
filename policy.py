@@ -31,7 +31,7 @@ class BaselinePolicy:
 
 
 class FreshestFirstPolicy:
-    """Swap the newest pairs when their predicted output meets the threshold."""
+    """Swap the newest pairs above the threshold or discard the weaker one."""
 
     def __init__(self, params, min_swap_fidelity=0.0):
         self.chains = params["policy"]["swap_chains"]
@@ -44,13 +44,16 @@ class FreshestFirstPolicy:
             if not left_pairs or not right_pairs:
                 continue
 
-            predicted_fidelity = (
-                state.current_fidelity(left_pairs[-1])
-                * state.current_fidelity(right_pairs[-1])
-                * state.f_swap
-            )
+            left_pair, right_pair = left_pairs[-1], right_pairs[-1]
+            left_fidelity = state.current_fidelity(left_pair)
+            right_fidelity = state.current_fidelity(right_pair)
+            predicted_fidelity = left_fidelity * right_fidelity * state.f_swap
             if predicted_fidelity >= self.min_swap_fidelity:
                 sim.swap(left, right, left_index=-1, right_index=-1)
+            elif (left_fidelity, left_pair.born) <= (right_fidelity, right_pair.born):
+                sim.discard(left, index=-1)
+            else:
+                sim.discard(right, index=-1)
 
 
 def make_policy(params):
