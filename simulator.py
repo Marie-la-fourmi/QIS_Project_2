@@ -9,6 +9,7 @@ Only numpy + standard library + qnetsim may be used.
 
 import math
 
+from fastapi import params
 import numpy as np
 
 from qnetsim import Link, Simulator, summarise
@@ -100,26 +101,25 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
     ph=params["physics"]
     #get the simulator object
     sim = Simulator(make_links(params, which="variant"),
-                    t2 = ph["t2"],
+                    t2 = ph["t2_ms"],
                     q_swap = ph["q_swap"],
                     f_swap = ph["f_swap"],
                     purification_allowed = ph["purification_allowed"],
                     seed = seed)
     #run the simulator for sim_time_ms with the provided policy
-    delivered= sim.run(sim_time_ms, policy=policy)
-    #summarise the delivered pairs and compute p95 latency
-    out = summarise(sim.delivered, sim_time_ms)
+    delivered = sim.run(sim_time_ms, policy=policy)
+    out = summarise(delivered, sim_time_ms)
 
-    #compute p95 latency
-    lats=sorted(max(0, d.delivery_time - d.request_time) for d in zip(request_times(params,sim_time_ms,seed), delivered))
-    p95 = lats[min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)]
+    lats = sorted(max(0.0, d.delivered_at - r)
+              for r, d in zip(request_times(params, sim_time_ms, seed), delivered))
+    p95 = (lats[min(len(lats) - 1, int(math.ceil(0.95 * len(lats))) - 1)]
+       if lats else float("inf"))
     return {
         "rate": out["rate"],
         "mean_fidelity": out["mean_fidelity"],
         "p95_latency_ms": p95,
-        "pairs_consumed_per_delivery": out["generated"] / max(1, len(delivered)),
+        "pairs_consumed_per_delivery": sim.state.stats["generated"] / max(1, len(delivered)),
     }
-    raise NotImplementedError("TODO: implement run_variant_scenario")
 
 
     """Full variant scenario with YOUR policy.
