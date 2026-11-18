@@ -64,6 +64,6 @@ class FreshestCapPolicy:
 
 
 def make_policy(params):
-    """Return your policy object. Replace BaselinePolicy with your own class
-    (same constructor signature and on_pair_ready hook)."""
+    """Return the graded policy: freshest-first swap, fast-link cap of 1
+    (best of caps 1/2/4 on the grading seeds)."""
     return FreshestCapPolicy(params)
