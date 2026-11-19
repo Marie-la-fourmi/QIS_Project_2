@@ -70,4 +70,4 @@ class PurifyThenSwap:
 def make_policy(params):
     """Return your policy object. Replace BaselinePolicy with your own class
     (same constructor signature and on_pair_ready hook)."""
-    return PurifyThenSwap(params)
+    return BaselinePolicy(params)
