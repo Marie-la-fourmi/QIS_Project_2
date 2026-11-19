@@ -1,5 +1,5 @@
 """
-check_policy.py — check make_policy() against the variant SLOs.
+check_policy.py — check make_policy() against the variant SLOs (same output format as run_var.py).
 Not part of the submission zip. Run from the repo root: python check_policy.py
 
 AI assistance: Claude (Anthropic) wrote this check script.
@@ -7,32 +7,25 @@ AI assistance: Claude (Anthropic) wrote this check script.
 
 import json
 
+from simulator import run_one_hop, run_two_hop, run_variant_scenario
 from policy import make_policy
-from simulator import run_variant_scenario
 
 params = json.load(open("variant_params.json"))
-T, slo = params["grading"]["sim_time_ms"], params["slo"]
-seeds = [("grading", params["grading"]["seed"])] + [
-    ("held-out", s) for s in params["grading"]["held_out_seeds"]]
+T = params["grading"]["sim_time_ms"]
+slo = params["slo"]
 
-print(f"SLO: rate >= {slo['min_rate']}, fidelity >= {slo['min_fidelity']}, "
-      f"p95 <= {slo['max_p95_latency_ms']} ms\n")
-grading_ok = True
-for kind, seed in seeds:
+# Reference scenarios (validation) on the grading seed
+for name, fn in [("one_hop", run_one_hop), ("two_hop", run_two_hop)]:
+    try:
+        print(name, fn(params, T, 1013), "| expected :", params["reference"]["expected"])
+    except Exception as e:  # keep going so the SLO check still runs
+        print(name, ": ERROR", type(e).__name__, e)
+
+# Variant scenario with our policy: grading seed + held-out seeds
+print("SLO:", slo)
+for seed in [params["grading"]["seed"], *params["grading"]["held_out_seeds"]]:   # 1013, 7039, 7040, 7041
     r = run_variant_scenario(params, T, seed, make_policy(params))
-    checks = [r["rate"] >= slo["min_rate"],
-              r["mean_fidelity"] >= slo["min_fidelity"],
-              r["p95_latency_ms"] <= slo["max_p95_latency_ms"]]
-    marks = ["ok" if c else "FAIL" for c in checks]
-    print(f"{kind:8s} seed {seed}: rate {r['rate']:.2f} [{marks[0]}]  "
-          f"fidelity {r['mean_fidelity']:.4f} [{marks[1]}]  "
-          f"p95 {r['p95_latency_ms']:.1f} ms [{marks[2]}]  "
-          f"pairs/delivery {r['pairs_consumed_per_delivery']:.2f}")
-    if kind == "grading":
-        grading_ok = all(checks)
-
-seed = params["grading"]["seed"]
-same = (run_variant_scenario(params, T, seed, make_policy(params))
-        == run_variant_scenario(params, T, seed, make_policy(params)))
-print(f"\ndeterministic (same seed twice): {'ok' if same else 'FAIL'}")
-print(f"grading seed meets all SLOs:     {'ok' if grading_ok else 'FAIL'}")
+    ok = (r["rate"] >= slo["min_rate"]
+          and r["mean_fidelity"] >= slo["min_fidelity"]
+          and r["p95_latency_ms"] <= slo["max_p95_latency_ms"])
+    print(seed, {k: round(v, 3) for k, v in r.items()}, "SLO OK" if ok else "SLO NON")

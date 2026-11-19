@@ -92,7 +92,7 @@ def run_one_hop(params, sim_time_ms, seed) -> dict:
     sim=Simulator(links, phys['t2_ms'], phys['q_swap'], phys['f_swap'],     #create simulator
                  phys['purification_allowed'], seed)
     
-    delivered_list=sim.run(sim_time_ms, policy=_OneHopPolicy)               #run the simulator with the proper policy -> considers every generated pair is delivered
+    delivered_list=sim.run(sim_time_ms, policy=_OneHopPolicy())             #run the simulator with the proper policy -> considers every generated pair is delivered
     out= summarise(delivered_list, sim_time_ms,requests=None)               #gets the metrics out of summarise
 
     return {"rate": out['rate'], "mean_fidelity": out['mean_fidelity']}
