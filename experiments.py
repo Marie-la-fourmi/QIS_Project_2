@@ -19,6 +19,7 @@ CI: 95% t-interval half-width over the per-seed rates.
 
 import json
 import math
+from copy import deepcopy
 
 import numpy as np
 
@@ -41,7 +42,7 @@ def mean_ci95(values):
 
 
 def run_sensitivity(params, seeds) -> dict:
-    """TODO: implement the OAT sweep described above.
+    """Run the OAT sweep described above.
     For each t2 in params['experiment']['t2_grid_ms']:
       - deep-copy params, set params_copy['physics']['t2_ms'] = t2
       - for each seed in seeds[:seeds_per_point]: run the variant scenario
@@ -49,7 +50,47 @@ def run_sensitivity(params, seeds) -> dict:
       - append {"t2_ms": ..., "rate_mean": ..., "rate_ci95": ..., "n_seeds": ...}
     Write the results dict to experiment_results.json and return it.
     """
-    raise NotImplementedError("TODO: implement run_sensitivity")
+    experiment = params["experiment"]
+    seeds_per_point = experiment["seeds_per_point"]
+    if seeds_per_point < 1:
+        raise ValueError("seeds_per_point must be positive")
+    # Use the same seeds at every T2 value for a consistent comparison.
+    selected_seeds = list(seeds)[:seeds_per_point]
+    if len(selected_seeds) < seeds_per_point:
+        raise ValueError("Not enough seeds for the requested seeds_per_point")
+
+    results = {
+        "parameter": "t2_ms",
+        "grid": list(experiment["t2_grid_ms"]),
+        "seeds_per_point": seeds_per_point,
+        "points": [],
+    }
+    for t2 in results["grid"]:
+        # Change only T2 and preserve the original configuration.
+        params_copy = deepcopy(params)
+        params_copy["physics"]["t2_ms"] = t2
+        rates = []
+        for seed in selected_seeds:
+            # Start each run with a fresh policy to avoid carrying over state.
+            policy = make_policy(params_copy)
+            metrics = run_variant_scenario(
+                params_copy, params_copy["grading"]["sim_time_ms"], seed, policy
+            )
+            rates.append(metrics["rate"])
+        # Summarise the per-seed rates with a mean and 95% CI half-width.
+        mean, half_width = mean_ci95(rates)
+        results["points"].append({
+            "t2_ms": t2,
+            "rate_mean": mean,
+            "rate_ci95": half_width,
+            "n_seeds": len(rates),
+        })
+
+    # Write the experiment artefact in the required grading format.
+    with open("experiment_results.json", "w", encoding="utf-8") as output:
+        json.dump(results, output, indent=2, allow_nan=False)
+        output.write("\n")
+    return results
 
 
 if __name__ == "__main__":
