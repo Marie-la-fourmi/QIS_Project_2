@@ -15,6 +15,8 @@ Output contract (autograded): write experiment_results.json containing
   ]
 }
 CI: 95% t-interval half-width over the per-seed rates.
+
+AI assistance: Claude (Anthropic) was used to review and test run_sensitivity.
 """
 
 import json

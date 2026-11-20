@@ -12,7 +12,8 @@ Design space (see spec section 3.2):
   * hold vs swap rules (e.g., wait for a purified partner);
   * discard pairs whose current fidelity has fallen below a floor.
 
-AI assistance: Claude (Anthropic) was used to draft and test FreshestCapPolicy.
+AI assistance: Claude (Anthropic) was used to draft and test FreshestCapPolicy
+and to tune the UltimatePolicy parameters used in make_policy.
 """
 
 import math
@@ -167,5 +168,7 @@ class FreshestCapPolicy:
 
 def make_policy(params):
     """Return the graded policy: UltimatePolicy (team's parameterised policy).
-    FreshestCapPolicy is kept above as the alternative we compared against."""
-    return UltimatePolicy(params)
+    No purification; discard link-1 pairs that have decayed below 0.913, then
+    swap the freshest pairs. FreshestCapPolicy is kept above as the alternative
+    we compared against."""
+    return UltimatePolicy(params, f_purify0=0, f_purify1=0, f_floor1=0.913)

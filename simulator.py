@@ -5,6 +5,8 @@ Drive the provided harness (qnetsim.py) to implement the three graded
 entry points. Signatures are normative; the autograder imports them.
 
 Only numpy + standard library + qnetsim may be used.
+
+AI assistance: Claude (Anthropic) was used to find and fix a bug in run_one_hop.
 """
 
 import math
