@@ -65,16 +65,6 @@ def request_times(params, sim_time_ms, seed):
 
 # ---------------------------------------------------------------- graded entry points
 
-class _OneHopPolicy:
-    def on_pair_ready(self, link, pair, state, sim):
-        # la paire est consommée immédiatement : fidélité = fidélité à la naissance
-        sim.delivered.append(DeliveredPair(
-            request_id=-1,
-            delivered_at=state.now,
-            fidelity=state.current_fidelity(pair),
-            consumed=1,
-        ))
-
 def run_one_hop(params, sim_time_ms, seed) -> dict:
     """Reference scenario: a single elementary link, no swapping.
     Return {"rate": ..., "mean_fidelity": ...}.
@@ -93,6 +83,16 @@ def run_one_hop(params, sim_time_ms, seed) -> dict:
     phys=params['physics']                                                  #params structure in json file
     sim=Simulator(links, phys['t2_ms'], phys['q_swap'], phys['f_swap'],     #create simulator
                  phys['purification_allowed'], seed)
+
+    class _OneHopPolicy:
+        def on_pair_ready(self, link, pair, state, sim):
+            # Count each fresh pair as an immediate delivery.
+            sim.delivered.append(DeliveredPair(
+                request_id=-1,
+                delivered_at=state.now,
+                fidelity=state.current_fidelity(pair),
+                consumed=1,
+            ))
     
     delivered_list=sim.run(sim_time_ms, policy=_OneHopPolicy())             #run the simulator with the proper policy -> considers every generated pair is delivered
     out= summarise(delivered_list, sim_time_ms,requests=None)               #gets the metrics out of summarise
