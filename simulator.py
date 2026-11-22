@@ -137,7 +137,21 @@ def run_two_hop(params, sim_time_ms, seed) -> dict:
 
 
 def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
+    """Full variant scenario with YOUR policy.
+    Return {"rate": ..., "mean_fidelity": ..., "p95_latency_ms": ...,
+            "pairs_consumed_per_delivery": ...}.
 
+    TODO:
+      * build the variant topology links;
+      * construct the Simulator with your variant's physics
+        (t2, q_swap, f_swap, purification_allowed, seed);
+      * generate request_times(...); use a pooled unlimited end-to-end buffer.
+        A request consumes a buffered pair at zero latency, or queues FIFO
+        for a later delivery. Exclude unserved requests from p95. Fidelity
+        is measured at generation; this buffer does not model further decay;
+      * return the four metrics. pairs_consumed_per_delivery =
+        stats['generated'] / max(1, delivered).
+    """
     #get paramters from .JSON
     ph=params["physics"]
     #get the simulator object
@@ -165,21 +179,3 @@ def run_variant_scenario(params, sim_time_ms, seed, policy) -> dict:
         "p95_latency_ms": p95,
         "pairs_consumed_per_delivery": sim.state.stats["generated"] / max(1, len(delivered)),
     }
-
-
-    """Full variant scenario with YOUR policy.
-    Return {"rate": ..., "mean_fidelity": ..., "p95_latency_ms": ...,
-            "pairs_consumed_per_delivery": ...}.
-
-    TODO:
-      * build the variant topology links;
-      * construct the Simulator with your variant's physics
-        (t2, q_swap, f_swap, purification_allowed, seed);
-      * generate request_times(...); use a pooled unlimited end-to-end buffer.
-        A request consumes a buffered pair at zero latency, or queues FIFO
-        for a later delivery. Exclude unserved requests from p95. Fidelity
-        is measured at generation; this buffer does not model further decay;
-      * return the four metrics. pairs_consumed_per_delivery =
-        stats['generated'] / max(1, delivered).
-    """
-    
